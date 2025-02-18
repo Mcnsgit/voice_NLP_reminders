@@ -3,15 +3,13 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.gzip import GZipMiddleware
-from app.core.rate_limit import RateLimitMiddleware
 from app.core.config import get_settings
-import uuid
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi import Request, Response
 import html
 import json
 import logging
-
+import secrets
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -67,17 +65,12 @@ class XSSProtectionMiddleware(BaseHTTPMiddleware):
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        request_id = str(uuid.uuid4())
+
+        request_id = secrets.token_hex(16)
         request.state.request_id = request_id
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
         return response
-
-
-# TODO Securty header Missing
-# add security headers middleware
-# implemtn csrf protection
-# add content security policy
 
 
 def setup_middleware(app: FastAPI) -> None:
@@ -90,17 +83,11 @@ def setup_middleware(app: FastAPI) -> None:
     @app.middleware("http")
     async def add_security_headers(request: Request, call_next):
         response = await call_next(request)
-        response.headers["X-Content-Type_Options"] = "nosniff"
+        response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Strict-Transport-Security"] = "max-age=31536000"
         return response
-
-    # Rate Limiting - with proper initialization
-    if settings.ENABLE_RATE_LIMIT:
-        app.add_middleware(
-            RateLimitMiddleware, calls=settings.RATE_LIMIT_PER_MINUTE, period=60
-        )
 
     # XSS Protection
     app.add_middleware(XSSProtectionMiddleware)
@@ -117,6 +104,6 @@ def setup_middleware(app: FastAPI) -> None:
         CORSMiddleware,
         allow_origins=settings.ALLOWED_ORIGINS,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=settings.ALLOWED_METHODS,
+        allow_headers=settings.ALLOWED_HEADERS,
     )

@@ -7,9 +7,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.core.config import settings
 from app.models.user import User
-from app.db.session import get_db
+from app.db.session import database_session
 from sqlalchemy.ext.asyncio import AsyncSession
-
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -46,7 +45,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 
 async def get_current_user(
-    db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)
+    db: AsyncSession = Depends(database_session.get_database_session),
+    token: str = Depends(oauth2_scheme),
 ) -> User:
     """Get the current authenticated user"""
     credentials_exception = HTTPException(
@@ -65,12 +65,17 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    # Get user from database
-    user = await db.get(User, int(user_id))
-    if user is None:
+    try:
+        user_id_int = int(user_id)
+    except (ValueError, TypeError):
         raise credentials_exception
 
-    return user
+    # Get user from database
+    stmt = await db.get(User, user_id_int)
+    if stmt is None:
+        raise credentials_exception
+
+    return stmt
 
 
 async def get_current_active_user(
@@ -82,9 +87,3 @@ async def get_current_active_user(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
     return current_user
-
-
-# TODO  Enhance token security:
-#  - Implement token rotation
-#  - Add token blacklisting
-#  - Track active sessions

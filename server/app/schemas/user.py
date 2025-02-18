@@ -1,25 +1,32 @@
 # app/schemas/user.py
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import EmailStr, Field
+from typing import Optional, List
 from datetime import datetime
-from typing import Optional
-from uuid import UUID
+from .base import BaseSchema
+from app.schemas.task import TaskResponse
 
 
-class UserBase(BaseModel):
-    """Base User Schema"""
+class UserRead(BaseSchema):
+    """Schema for reading user data"""
 
+    id: int
     email: EmailStr
     username: Optional[str] = None
-    is_active: bool = True
+    is_active: bool
+    last_login: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
 
 
-class UserCreate(UserBase):
-    """Schema for creating a user"""
+class UserCreate(BaseSchema):
+    """Schema for creating a new user"""
 
+    email: EmailStr
     password: str = Field(..., min_length=8)
+    username: Optional[str] = None
 
 
-class UserUpdate(BaseModel):
+class UserUpdate(BaseSchema):
     """Schema for updating a user"""
 
     email: Optional[EmailStr] = None
@@ -27,37 +34,9 @@ class UserUpdate(BaseModel):
     password: Optional[str] = Field(None, min_length=8)
 
 
-class UserInDB(UserBase):
-    """Schema for user in database"""
+class UserDetail(UserRead):
+    """Detailed user response with related data"""
 
-    id: UUID
-    hashed_password: str
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
-class UserResponse(UserBase):
-    """Schema for user response"""
-
-    id: UUID
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
-class Token(BaseModel):
-    """Schema for authentication token"""
-
-    access_token: str
-    token_type: str = "bearer"
-
-
-class TokenData(BaseModel):
-    """Schema for token data"""
-
-    user_id: str
+    tasks_count: int
+    voice_inputs_count: int
+    recent_tasks: List[TaskResponse]

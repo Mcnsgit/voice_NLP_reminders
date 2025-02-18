@@ -1,20 +1,26 @@
-# app/api/v1/router/__init__.py
+# app/api/v1/router.py
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
-    task_router,
-    note_router,
-    reminder_router,
-    auth_router,
-    test,
+    tasks,
+    reminders,
+    voice,
+    health,
+    # auth,
 )
 
 api_router = APIRouter()
 
-# Include all routers
-api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
-api_router.include_router(task_router, prefix="/tasks", tags=["tasks"])
-api_router.include_router(note_router, prefix="/tasks/{task_id}/notes", tags=["notes"])
-api_router.include_router(
-    reminder_router, prefix="/tasks/{task_id}/reminders", tags=["reminders"]
-)
-api_router.include_router(test.router, prefix="/test", tags=["test"])
+# Health check endpoints
+api_router.include_router(health.router, prefix="/health", tags=["health"])
+
+# Authentication endpoints
+# api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+
+# Task management endpoints
+api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
+
+# Reminder endpoints
+api_router.include_router(reminders.router, prefix="/reminders", tags=["reminders"])
+
+# Voice processing endpoints
+api_router.include_router(voice.router, prefix="/voice", tags=["voice"])

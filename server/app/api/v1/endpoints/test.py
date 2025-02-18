@@ -2,13 +2,15 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-from app.db.session import get_db
+from app.db.session import database_session
 
 router = APIRouter()
 
 
 @router.get("/test-db")
-async def test_db_connection(db: AsyncSession = Depends(get_db)):
+async def test_db_connection(
+    db: AsyncSession = Depends(database_session.async_session_maker),
+):
     """Test database connection"""
     try:
         result = await db.execute(text("SELECT 1"))

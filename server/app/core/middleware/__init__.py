@@ -1,14 +1,14 @@
 # app/core/middleware/__init__.py
 from .middleware import (
     RequestIDMiddleware,
-    RateLimitMiddleware,
+    # RateLimitMiddleware,
     XSSProtectionMiddleware,
     setup_middleware,
 )
 
 __all__ = [
     "RequestIDMiddleware",
-    "RateLimitMiddleware",
+    # "RateLimitMiddleware",
     "XSSProtectionMiddleware",
     "setup_middleware",
 ]

@@ -19,12 +19,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Test database URL
-TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+TEST_DATABASE_URL = (
+    "postgresql+asyncpg://taskmanager:taskmanager@localhost:5432/taskmanager_test"
+)
 
 # Create test engine
-test_engine = create_async_engine(
-    TEST_DATABASE_URL, connect_args={"check_same_thread": False}, echo=True
-)
+test_engine = create_async_engine(TEST_DATABASE_URL, echo=True, future=True)
 
 # Create test session factory
 TestingSessionLocal = sessionmaker(
@@ -80,10 +80,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 @pytest.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
     """Create a test client for making API requests."""
-    # Create test client without directly passing FastAPI app
-    async with AsyncClient(base_url="http://testserver") as ac:
-        # Add test app to client
-        ac.app = app
+    async with AsyncClient(app=app, base_url="http://test") as ac:
         yield ac
 
 
@@ -99,7 +96,6 @@ async def auth_headers(test_user: User) -> Dict[str, str]:
     return create_test_auth_headers(test_user.id)
 
 
-# Additional test fixture for tasks
 @pytest.fixture
 async def test_task(db_session: AsyncSession, test_user: User) -> Dict:
     """Create a test task for testing."""
@@ -111,9 +107,9 @@ async def test_task(db_session: AsyncSession, test_user: User) -> Dict:
         "title": task.title,
         "description": task.description,
         "user_id": task.user_id,
-        "status": task.status,
+        "status": task.status.value,
         "priority": task.priority,
-        "due_date": task.due_date,
+        "due_date": task.due_date.isoformat() if task.due_date else None,
     }
 
 
@@ -131,9 +127,9 @@ async def test_tasks(db_session: AsyncSession, test_user: User) -> list:
                 "title": task.title,
                 "description": task.description,
                 "user_id": task.user_id,
-                "status": task.status,
+                "status": task.status.value,
                 "priority": task.priority,
-                "due_date": task.due_date,
+                "due_date": task.due_date.isoformat() if task.due_date else None,
             }
         )
     return tasks

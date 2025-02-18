@@ -1,17 +1,15 @@
 # 4. Update Note model (app/models/note.py)
-from sqlalchemy import Column, String, ForeignKey, UUID
+from sqlalchemy import Column, String, ForeignKey, Integer
 from sqlalchemy.orm import relationship
-from app.db.base import BaseModel
-import uuid
+from app.db.base_class import Base
 
 
-class Note(BaseModel):
+class Note(Base):
     __tablename__ = "notes"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     content = Column(String, nullable=False)
     task_id = Column(
-        UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
     )
 
     task = relationship("Task", back_populates="notes")

@@ -1,53 +1,40 @@
 # main.py
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.middleware import setup_middleware
-from app.db.session import init_db, close_db
+from app.db.session import database_session
 from app.core.redis import init_redis, close_redis
-
-from fastapi.middleware.cors import CORSMiddleware
 from app.core.error_handlers import setup_error_handlers
 from app.api.v1.router import api_router
-from typing import Optional
-import socket
+from app.schemas.user import UserCreate, UserRead, UserUpdate
+from app.core.security import get_current_active_user
+from app.models.user import User
 import logging
 
-
 settings = get_settings()
+
 # Setup logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-def find_available_port(start_port: int, max_port: int) -> Optional[int]:
-    """Find an available port in the given range."""
-    for port in range(start_port, max_port + 1):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind(("", port))
-                return port
-            except OSError:
-                continue
-    return None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Application lifecycle manager"""
     try:
         logger.info("Starting up application...")
-
-        # Then initialize
-        await init_db()
+        await database_session.init_db()
         await init_redis()
-
         yield
     except Exception as e:
-        logger.error(f"Error during application lifecycle: {str(e)}", exc_info=True)
+        logger.error(f"Error during startup: {str(e)}", exc_info=True)
         raise
     finally:
         logger.info("Shutting down application...")
         await close_redis()
-        await close_db()
+        await database_session.close_db()
 
 
 def create_application() -> FastAPI:
@@ -59,61 +46,48 @@ def create_application() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Setup error handlers
+    # CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.ALLOWED_ORIGINS,  # Changed from CORS_ORIGINS to ALLOWED_ORIGINS
+        allow_credentials=True,
+        allow_methods=settings.ALLOWED_METHODS,
+        allow_headers=settings.ALLOWED_HEADERS,
+    )
 
+    # Setup handlers and middleware
     setup_error_handlers(app)
-
-    # Setup middleware
     setup_middleware(app)
 
-    # Import and include routers
+    # Include API routers
+    app.include_router(api_router, prefix="/api/v1")
 
-    app.include_router(api_router, prefix=settings.API_V1_STR)
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint"""
+        return {
+            "status": "healthy",
+            "version": settings.VERSION,
+            "environment": settings.ENVIRONMENT,
+        }
+
+    @app.get("/authenticated-route")
+    async def authenticated_route(user: User = Depends(get_current_active_user)):
+        return {"message": f"Hello {user.email}!"}
 
     return app
 
 
+# Create application instance
 app = create_application()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Add your frontend origin here
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.get("/")
-async def root():
-    return {"message": "Server on"}
-
-
-@app.get("/homepage")
-def homepage():
-    return {"message": "welcome to the homepage"}
-
-
-# @app.get("/api/user")
-# def get_user(credentials:HTTPAuthorizationCredentials = Depends(security)):
-#     #extract the token form the authorization header
-#     token = credentials.credentials
-#     user_data = {
-#         token,
-#     }
-
-#     if user_data["username"] and user_data["email"]:
-#         return user_data
-#     raise HTTPException(status_code=401, detial="Invalid Token")
-
 
 if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=8000,
+        host=settings.HOST,
+        port=settings.PORT,
         reload=settings.DEBUG,
         workers=settings.WORKERS_COUNT,
     )

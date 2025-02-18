@@ -3,11 +3,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from httpx import AsyncClient
 from app.models.enums import TaskStatus
-
-# from app.tests.utils.user import create_random_user
-# from app.tests.utils.auth import create_test_auth_headers
 from datetime import datetime, timedelta
-import uuid
 
 pytestmark = pytest.mark.asyncio
 
@@ -29,7 +25,7 @@ async def test_create_task(
     data = response.json()
     assert data["title"] == task_data["title"]
     assert data["description"] == task_data["description"]
-    assert uuid.UUID(data["id"])
+    assert isinstance(data["id"], int)  # Verify it's an integer ID
 
 
 async def test_get_task(
@@ -42,7 +38,7 @@ async def test_get_task(
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == test_task["title"]
-    assert data["id"] == str(test_task["id"])
+    assert data["id"] == test_task["id"]
 
 
 async def test_get_tasks(
@@ -53,6 +49,10 @@ async def test_get_tasks(
     assert response.status_code == 200
     data = response.json()
     assert len(data) == len(test_tasks)
+    # Verify the returned tasks match our test data
+    returned_ids = {task["id"] for task in data}
+    test_ids = {task["id"] for task in test_tasks}
+    assert returned_ids == test_ids
 
 
 async def test_update_task(
@@ -68,6 +68,7 @@ async def test_update_task(
     data = response.json()
     assert data["title"] == update_data["title"]
     assert data["description"] == update_data["description"]
+    assert data["id"] == test_task["id"]
 
 
 async def test_delete_task(

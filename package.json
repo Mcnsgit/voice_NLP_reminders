@@ -1,0 +1,12 @@
+{
+  "name": "voice-task-manager",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "mobile"
+  ],
+  "scripts": {
+    "start:mobile": "cd mobile && expo start",
+    "start:api": "cd api-service && uvicorn app.main:app --reload"
+  }
+}

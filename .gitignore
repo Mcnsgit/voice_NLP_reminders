@@ -21,7 +21,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
+.DS_Store
 # Virtual Environment
 .env
 .venv
@@ -112,3 +112,4 @@ alembic.ini
 *.swp
 *~
 
+.qodo

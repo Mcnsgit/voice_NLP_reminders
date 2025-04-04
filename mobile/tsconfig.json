@@ -12,5 +12,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-  ]
+, "components/ThemedView.jsx", "components/ThemedText.jsx", "components/VoiceInput.jsx"  ]
 }

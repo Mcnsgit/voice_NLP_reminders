@@ -8,5 +8,12 @@
   "scripts": {
     "start:mobile": "cd mobile && expo start",
     "start:api": "cd api-service && uvicorn app.main:app --reload"
+  },
+  "dependencies": {
+    "@react-native-community/netinfo": "^11.4.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.20",
+    "@types/react-native": "^0.72.8"
   }
 }
